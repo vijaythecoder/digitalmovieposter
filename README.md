@@ -8,7 +8,7 @@ https://www.themoviedb.org/settings/api
 
 Once you have the API Key, Replace the XXXXXXX in the following url and use it on your TV browser to play the slideshow of the latest TV shows. One important thing is, once its loaded using the remote tap/touch on the poster which will make it full screen. 
 ```
-https://vijaythecoder.github.io/posterframe?apikey=XXXXXXXXX
+https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX
 ```
 
 Todo:
