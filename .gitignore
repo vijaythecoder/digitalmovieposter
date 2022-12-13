@@ -1,4 +1,4 @@
-# Created by .ignore support plugin (hsz.mobi)
+u # Created by .ignore support plugin (hsz.mobi)
 ### Node template
 # Logs
 /logs
@@ -18,7 +18,7 @@ lib-cov
 
 # Coverage directory used by tools like istanbul
 coverage
-
+1
 # nyc test coverage
 .nyc_output
 

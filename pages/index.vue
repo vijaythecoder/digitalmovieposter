@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="bg-gray-900 h-screen w-screen rotate-90">
+    <div class="bg-gray-900 h-screen w-screen -rotate-90" @click="toggleFullScreen">
       <template v-for="movie in movies" >
         <img :key="movie.id" class="transition-opacity absolute ease-in duration-[2000ms] opacity-0 h-screen w-screen"  :src="'https://image.tmdb.org/t/p/original/' + movie.poster_path" alt="">
       </template>
@@ -35,8 +35,6 @@ export default {
       let counter = 0;
       images[counter].classList.add('opacity-100');
 
-
-
       setInterval(() => {
         if (images.length === counter) {
           counter = 0
@@ -52,8 +50,17 @@ export default {
         }
       }, 10000)
 
+    },
+
+    toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
     }
-  }
+
+}
 
 }
 </script>
