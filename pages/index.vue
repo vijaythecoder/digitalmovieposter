@@ -2,7 +2,12 @@
   <div>
     <div class="bg-gray-900 h-screen w-screen -rotate-90" @click="toggleFullScreen">
       <template v-for="movie in movies" >
-        <img :key="movie.id" class="transition-opacity absolute ease-in duration-[2000ms] opacity-0 h-screen w-screen"  :src="'https://image.tmdb.org/t/p/original/' + movie.poster_path" alt="">
+        <div :key="movie.id">
+          <img class="transition-opacity absolute ease-in duration-[2000ms] opacity-0 h-screen w-screen"  :src="'https://image.tmdb.org/t/p/original/' + movie.poster_path" alt="">
+          <div class="absolute bg-sky-500/[.06] bottom-0 w-full h-40">
+            hello
+          </div>
+        </div>
       </template>
     </div>
 
@@ -22,7 +27,7 @@ export default {
   },
   mounted () {
 
-    axios.get('https://api.themoviedb.org/3/trending/tv/day?api_key=' + this.$route.query.apikey).then(response => {
+    axios.get('https://api.themoviedb.org/3/trending/' + (this.$route.query.type ?? 'all') + '/' + (this.$route.query.time ?? 'day') + '?api_key=' + this.$route.query.apikey).then(response => {
       this.movies = response.data.results
       setTimeout(() => {
         this.startAnimation()
