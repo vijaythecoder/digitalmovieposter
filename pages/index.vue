@@ -29,13 +29,13 @@ export default {
     setTimeout(() => {
       this.startAnimation()
     }, 100);
-    if (this.$route.query.trending) {
+    if (this.$route.query.trending || (!this.$route.query.tv && !this.$route.query.movies)) {
       axios.get('https://api.themoviedb.org/3/trending/' + (this.$route.query.type ?? 'all') + '/' + (this.$route.query.time ?? 'day') + '?api_key=' + this.$route.query.apikey).then(response => {
         this.movies = response.data.results
       })
     }
 
-    // The follow api request to themoviedb.org is in foreach loop, which is very bad way to do the requests but the moviedb.org API is limited to fetch only 1 movie/tv show at a time but they have a ticket in their backlog to allow us to fetch multiple movies at the same time using IDs. 
+    // The follow api request to themoviedb.org is in foreach loop, which is very bad way to do the requests but the moviedb.org API is limited to fetch only 1 movie/tv show at a time but they have a ticket in their backlog to allow us to fetch multiple movies at the same time using IDs.
 
     const movieIDs = this.$route.query?.movies?.split(',');
     if (movieIDs && movieIDs.length > 0) {
@@ -75,7 +75,7 @@ export default {
         if (images[counter] !== undefined) {
           images[counter].classList.add('opacity-100');
         }
-      }, 1000)
+      }, this.$route.query.timer*1000 || 10000)
 
     },
 
