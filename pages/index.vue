@@ -35,6 +35,8 @@ export default {
       })
     }
 
+    // The follow api request to themoviedb.org is in foreach loop, which is very bad way to do the requests but the moviedb.org API is limited to fetch only 1 movie/tv show at a time but they have a ticket in their backlog to allow us to fetch multiple movies at the same time using IDs. 
+
     const movieIDs = this.$route.query?.movies?.split(',');
     if (movieIDs && movieIDs.length > 0) {
       movieIDs.forEach(movieID => {
