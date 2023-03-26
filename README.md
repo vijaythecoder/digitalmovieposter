@@ -1,5 +1,8 @@
 # Movie Poster Frame
-This project is from my TikTok Video https://www.tiktok.com/@vijaysmarthome/video/7176371953446440234?is_copy_url=1&is_from_webapp=v1
+This project is from my Youtube Video https://www.youtube.com/watch?v=l9F4mU0FWpw
+
+[![DIY Digital Movie Poster](https://img.youtube.com/vi/l9F4mU0FWpw/0.jpg)](https://www.youtube.com/watch?v=l9F4mU0FWpw)
+
 
 To use this project, You need to get an API Key from the themoviedb.org.
 
