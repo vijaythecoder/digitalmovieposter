@@ -20,18 +20,18 @@ after /movie/ you can see the number so thats the ID of the movie.
 https://www.themoviedb.org/movie/324552-john-wick-chapter-2
 Now we have the id, you can add the parameter `&movies=324552` to show the john wick and also add multiple movie ids separating with commas. The final exmaple would look like below
 ```
-https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX**&movies=245891,604,238**
+https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238
 ```
 ### To Show TV Shows
 In the same way you can show TV show posters too and after adding TV show ids in the same way, the final url would look like below
 ```
-https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238&**tv=246,72637**
+https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238&tv=246,72637
 ```
 
 ### To Show Trending Movies/TV Shows 
 
 ```
-https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238&tv=246,72637**&trending=1**
+https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238&tv=246,72637&trending=1
 ```
 The above url will show all the trending tv shows and movies this week, to customize more, for example if you want to show only popular tv shows and not movies add `&type=tv` and vice versa for movies `&type=movies`
 The official documentation for those values can be found here https://developers.themoviedb.org/3/trending/get-trending
@@ -40,7 +40,7 @@ The official documentation for those values can be found here https://developers
 ### To Change the timer of the slideshow
 add `&timer=5` to the url. `5` is 5 seconds.
 ```
-https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238&tv=246,72637&trending=1&**timer=10**
+https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX&movies=245891,604,238&tv=246,72637&trending=1&timer=10
 ```
 
 
