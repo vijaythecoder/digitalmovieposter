@@ -14,7 +14,7 @@ https://vijaythecoder.github.io/digitalmovieposter/?apikey=XXXXXXXXX
 ## Customization
 You can customise the app to show different posters using the URL Parameters. 
 
-### To Show TV Movies
+### To Show Movies
 For example if you want to show the movie poster of John Wick which and it has ID of **324552**, you can grab this id from the themoviedb.org. If you look at the example URL below
 after /movie/ you can see the number so thats the ID of the movie. 
 https://www.themoviedb.org/movie/324552-john-wick-chapter-2
