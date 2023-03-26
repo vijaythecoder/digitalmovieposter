@@ -9,7 +9,7 @@ export default {
   },
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
-    title: 'Digital Movie Poster',
+    title: 'Digital Movie Poster - Vijaythecoder',
     meta: [
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
