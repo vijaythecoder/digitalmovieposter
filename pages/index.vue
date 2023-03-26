@@ -26,13 +26,33 @@ export default {
     }
   },
   mounted () {
+    setTimeout(() => {
+      this.startAnimation()
+    }, 100);
+    if (this.$route.query.trending) {
+      axios.get('https://api.themoviedb.org/3/trending/' + (this.$route.query.type ?? 'all') + '/' + (this.$route.query.time ?? 'day') + '?api_key=' + this.$route.query.apikey).then(response => {
+        this.movies = response.data.results
+      })
+    }
 
-    axios.get('https://api.themoviedb.org/3/trending/' + (this.$route.query.type ?? 'all') + '/' + (this.$route.query.time ?? 'day') + '?api_key=' + this.$route.query.apikey).then(response => {
-      this.movies = response.data.results
-      setTimeout(() => {
-        this.startAnimation()
-      }, 100);
-    })
+    const movieIDs = this.$route.query?.movies?.split(',');
+    if (movieIDs && movieIDs.length > 0) {
+      movieIDs.forEach(movieID => {
+        axios.get('https://api.themoviedb.org/3/movie/' + movieID + '?api_key=' + this.$route.query.apikey).then(response => {
+          this.movies.unshift(response.data)
+        })
+      })
+    }
+
+   const tvIDs = this.$route.query?.tv?.split(',');
+    if (tvIDs && tvIDs.length > 0) {
+      tvIDs.forEach(tvID => {
+        axios.get('https://api.themoviedb.org/3/tv/' + tvID + '?api_key=' + this.$route.query.apikey).then(response => {
+          this.movies.unshift(response.data)
+        })
+      })
+    }
+
   },
   methods: {
     startAnimation () {
@@ -53,7 +73,7 @@ export default {
         if (images[counter] !== undefined) {
           images[counter].classList.add('opacity-100');
         }
-      }, 10000)
+      }, 1000)
 
     },
 
@@ -69,3 +89,5 @@ export default {
 
 }
 </script>
+
+

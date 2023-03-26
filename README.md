@@ -16,3 +16,4 @@ Todo:
 2. Ability to configure which one which one of the above to show
 3. Ability to choose Platforms like HBO, Netflix, Disney, etc.
 4. Show extra info on the poster if needed like IMDB Rating, Now on playing on HBO, Netflix, etc.
+
