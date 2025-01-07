@@ -1,6 +1,10 @@
 <template>
   <div>
-    <div class="bg-gray-900 h-screen w-screen -rotate-90" @click="toggleFullScreen">
+    <div 
+      class="bg-gray-900 h-screen w-screen" 
+      :class="rotationClass"
+      @click="toggleFullScreen"
+    >
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center h-full">
         <div class="text-white text-2xl">Loading...</div>
@@ -57,13 +61,29 @@ export default {
       imageBaseUrl: 'https://image.tmdb.org/t/p/original',
       slideInterval: null,
       slideDuration: 10000, // Default 10 seconds
-      imagesLoaded: 0
+      imagesLoaded: 0,
+      rotation: 0
+    }
+  },
+  computed: {
+    rotationClass() {
+      return {
+        '-rotate-90': this.rotation === -90,
+        'rotate-90': this.rotation === 90,
+        'rotate-180': this.rotation === 180,
+        'rotate-0': this.rotation === 0
+      }
     }
   },
   created() {
     // Set slide duration from query params
     if (this.$route.query.timer) {
       this.slideDuration = parseInt(this.$route.query.timer) * 1000
+    }
+    
+    // Set rotation from query params
+    if (this.$route.query.rotate) {
+      this.rotation = parseInt(this.$route.query.rotate)
     }
   },
   mounted() {
@@ -189,5 +209,41 @@ export default {
 .fade-enter-to,
 .fade-leave-from {
   opacity: 1;
+}
+
+/* Add transform-origin for better rotation behavior */
+.-rotate-90,
+.rotate-90,
+.rotate-180,
+.rotate-0 {
+  transform-origin: center center;
+  transition: transform 0.3s ease;
+}
+
+/* Adjust container based on rotation */
+.-rotate-90,
+.rotate-90 {
+  width: 100vh !important;
+  height: 100vw !important;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+}
+
+.-rotate-90 {
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.rotate-90 {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.rotate-0 {
+  transform: rotate(0deg);
 }
 </style>
