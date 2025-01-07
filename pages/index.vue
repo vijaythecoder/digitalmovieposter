@@ -36,13 +36,17 @@
             >
             
             <!-- Movie Info Overlay -->
-            <div class="absolute bottom-0 left-0 right-0 text-white bg-black bg-opacity-50 p-4">
-              <h2 class="text-2xl font-bold">{{ movie.title || movie.name }}</h2>
-              <p class="text-sm">{{ movie.release_date || movie.first_air_date }}</p>
+            <div v-if="showInfo" class="absolute bottom-0 left-0 right-0 text-white">
+              <div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+              <div class="relative p-6">
+                <h2 class="text-2xl font-bold mb-2">{{ movie.title || movie.name }}</h2>
+                <p class="text-sm opacity-90">{{ movie.release_date || movie.first_air_date }}</p>
+              </div>
             </div>
           </div>
         </transition-group>
       </div>
+      
     </div>
   </div>
 </template>
@@ -62,7 +66,8 @@ export default {
       slideInterval: null,
       slideDuration: 10000, // Default 10 seconds
       imagesLoaded: 0,
-      rotation: 0
+      rotation: 0,
+      showInfo: true // Default value
     }
   },
   computed: {
@@ -76,18 +81,28 @@ export default {
     }
   },
   created() {
-    // Set slide duration from query params
+    // Get timer from query params
     if (this.$route.query.timer) {
       this.slideDuration = parseInt(this.$route.query.timer) * 1000
     }
     
-    // Set rotation from query params
+    // Get rotation from query params
     if (this.$route.query.rotate) {
       this.rotation = parseInt(this.$route.query.rotate)
     }
   },
   mounted() {
+    // Get URL parameters
+    const params = new URLSearchParams(window.location.search)
+    this.apiKey = params.get('apikey')
+    
+    // Convert string 'true'/'false' to boolean
+    const showInfoParam = params.get('showInfo')
+    this.showInfo = showInfoParam === null ? true : showInfoParam === 'true'
+    
     this.getMovieDBPosters()
+    
+    // Set up visibility change listener
     document.addEventListener('visibilitychange', this.handleVisibilityChange)
   },
   beforeDestroy() {
