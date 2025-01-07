@@ -407,7 +407,11 @@ export default {
     },
     generateURL() {
       if (!this.settings.apikey) return
-      const baseUrl = window.location.origin
+      
+      const baseUrl = window.location.hostname === 'localhost' 
+        ? window.location.origin 
+        : `${window.location.origin}/digitalmovieposter`
+        
       const params = new URLSearchParams()
       Object.entries(this.settings).forEach(([key, value]) => {
         params.set(key, value)
