@@ -334,7 +334,7 @@
           <div class="px-6 py-6 flex flex-col items-center text-center">
             <div class="w-full max-w-[240px] mb-4">
               <img 
-                src="/savvyagents.png" 
+                src="https://github.com/vijaythecoder/digitalmovieposter/blob/main/static/savvyagents.png?raw=true" 
                 alt="SavvyAgents.ai" 
                 class="w-full h-auto object-contain"
               />

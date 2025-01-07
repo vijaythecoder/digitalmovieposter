@@ -1,9 +1,9 @@
 <template>
   <div>
     <div 
-      class="bg-gray-900 h-screen w-screen" 
+      class="bg-gray-900 h-screen w-screen relative" 
       :class="rotationClass"
-      @click="toggleFullScreen"
+      @click="handleMainClick"
     >
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center h-full">
@@ -45,8 +45,27 @@
             </div>
           </div>
         </transition-group>
+
+        <!-- Control Buttons -->
+        <div v-if="showControls" class="control-buttons absolute top-4 right-4 flex space-x-3 z-50 p-2 rounded-xl bg-black/20 backdrop-blur-md shadow-lg" @click.stop>
+          <button 
+            @click="toggleFullScreen" 
+            class="p-2.5 bg-black/60 hover:bg-black/80 text-white rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-105"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+            </svg>
+          </button>
+          <button 
+            @click="hideControls" 
+            class="p-2.5 bg-black/60 hover:bg-black/80 text-white rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-105"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      
     </div>
   </div>
 </template>
@@ -67,7 +86,9 @@ export default {
       slideDuration: 10000, // Default 10 seconds
       imagesLoaded: 0,
       rotation: 0,
-      showInfo: true // Default value
+      showInfo: true, // Default value
+      showControls: true, // New state for control buttons
+      isFullScreen: false // Track fullscreen state
     }
   },
   computed: {
@@ -147,8 +168,10 @@ export default {
         this.movies = []
         this.imagesLoaded = 0
         
+        // Check for API key and redirect if not found
         if (!this.$route.query.apikey) {
-          throw new Error('MovieDB API key is required. Please add it to the URL as ?apikey=YOUR_API_KEY')
+          this.$router.push('/settings')
+          return
         }
 
         // Handle trending movies/shows
@@ -199,11 +222,29 @@ export default {
         this.loading = false
       }
     },
-    toggleFullScreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen()
-      } else if (document.exitFullscreen) {
-        document.exitFullscreen()
+    handleMainClick(e) {
+      // Only toggle controls if not clicking on the controls themselves
+      if (!e.target.closest('.control-buttons')) {
+        this.showControls = true
+      }
+    },
+
+    hideControls() {
+      this.showControls = false
+    },
+
+    async toggleFullScreen() {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen()
+          this.isFullScreen = true
+        } else {
+          await document.exitFullscreen()
+          this.isFullScreen = false
+        }
+        this.hideControls()
+      } catch (err) {
+        console.error('Error toggling fullscreen:', err)
       }
     }
   }
