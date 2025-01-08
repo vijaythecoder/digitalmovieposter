@@ -24,7 +24,7 @@
         >
           <div 
             v-for="(movie, index) in movies" 
-            :key="movie.id || index"
+            :key="movie.uniqueId"
             v-show="currentIndex === index"
             class="absolute inset-0 h-full w-full"
           >
@@ -36,11 +36,76 @@
             >
             
             <!-- Movie Info Overlay -->
-            <div v-if="showInfo" class="absolute bottom-0 left-0 right-0 text-white">
-              <div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+            <div v-if="showInfo && imageLoaded" 
+                 class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent pt-20 pb-6">
               <div class="relative p-6">
-                <h2 class="text-2xl font-bold mb-2">{{ movie.title || movie.name }}</h2>
-                <p class="text-sm opacity-90">{{ movie.release_date || movie.first_air_date }}</p>
+                <h2 class="text-2xl font-bold mb-2 text-white">{{ movie.title || movie.name }}</h2>
+                
+                <!-- Release Info & Metadata -->
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                  <span class="text-sm text-gray-300">
+                    {{ formatDate(movie.release_date || movie.first_air_date) }}
+                  </span>
+                  
+                  <!-- TV Show Info -->
+                  <template v-if="movie.content_type === 'tv'">
+                    <span class="text-sm text-gray-300">
+                      {{ movie.number_of_seasons }} Season{{ movie.number_of_seasons !== 1 ? 's' : '' }}
+                    </span>
+                    <span v-if="movie.latest_season" class="text-sm text-emerald-400">
+                      Latest: Season {{ movie.latest_season.season_number }}
+                    </span>
+                  </template>
+
+                  <!-- Runtime for Movies -->
+                  <span v-else-if="movie.runtime" class="text-sm text-gray-300">
+                    {{ Math.floor(movie.runtime / 60) }}h {{ movie.runtime % 60 }}m
+                  </span>
+                </div>
+
+                <!-- Watch Providers -->
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                  <!-- Netflix Badge -->
+                  <div v-if="movie.watch_providers?.flatrate?.some(p => p.provider_id === 8)"
+                       class="netflix-badge">
+                    <img src="@/assets/netflix-logo.svg" alt="Netflix" class="h-4">
+                    <span>Now Streaming</span>
+                  </div>
+
+                  <!-- Theatrical Release -->
+                  <div v-if="isInTheaters(movie)"
+                       class="px-3 py-1 rounded-full text-sm bg-yellow-500 text-black font-medium">
+                    In Theaters
+                  </div>
+
+                  <!-- Other Streaming Services -->
+                  <div v-if="movie.watch_providers?.flatrate"
+                       class="flex items-center gap-2">
+                    <span v-for="provider in getOtherProviders(movie.watch_providers.flatrate)"
+                          :key="provider.provider_id"
+                          class="px-3 py-1 rounded-full text-sm bg-gray-700 text-white">
+                      {{ provider.provider_name }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Overview -->
+                <p v-if="movie.overview" class="text-gray-300 text-sm line-clamp-2">
+                  {{ movie.overview }}
+                </p>
+
+                <!-- Additional Metadata -->
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span v-if="movie.vote_average" 
+                        class="px-2 py-1 rounded bg-gray-800 text-sm text-yellow-400">
+                    ★ {{ movie.vote_average.toFixed(1) }}
+                  </span>
+                  <span v-for="genre in movie.genres?.slice(0, 3)" 
+                        :key="genre.id"
+                        class="px-2 py-1 rounded bg-gray-800 text-sm text-gray-300">
+                    {{ genre.name }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -71,7 +136,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import { streamingService } from '@/services/streaming'
 
 export default {
   name: 'IndexPage',
@@ -88,7 +153,9 @@ export default {
       rotation: 0,
       showInfo: true, // Default value
       showControls: true, // New state for control buttons
-      isFullScreen: false // Track fullscreen state
+      isFullScreen: false, // Track fullscreen state
+      imageLoaded: false,
+      interval: null
     }
   },
   computed: {
@@ -113,45 +180,232 @@ export default {
     }
   },
   mounted() {
-    // Get URL parameters
-    const params = new URLSearchParams(window.location.search)
-    this.apiKey = params.get('apikey')
-    
-    // Convert string 'true'/'false' to boolean
-    const showInfoParam = params.get('showInfo')
-    this.showInfo = showInfoParam === null ? true : showInfoParam === 'true'
-    
-    this.getMovieDBPosters()
-    
-    // Set up visibility change listener
-    document.addEventListener('visibilitychange', this.handleVisibilityChange)
+    try {
+      // Get settings from URL
+      const params = new URLSearchParams(window.location.search);
+      
+      // Set rotation from URL
+      const rotation = params.get('rotation');
+      if (rotation) {
+        this.rotation = parseInt(rotation);
+      }
+
+      // Set other settings
+      this.showInfo = params.get('showInfo') !== 'false';
+      this.slideDuration = parseInt(params.get('slideDuration')) || 30;
+      
+      if (params.get('apikey')) {
+        this.fetchMovies();
+      } else {
+        this.error = 'Please provide an API key in the settings';
+      }
+    } catch (err) {
+      console.error('Error in mounted:', err);
+      this.error = err.message;
+    }
   },
   beforeDestroy() {
     this.stopSlideshow()
     document.removeEventListener('visibilitychange', this.handleVisibilityChange)
   },
   methods: {
+    async fetchMovies() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const settings = {};
+        for (const [key, value] of params.entries()) {
+          settings[key] = value;
+        }
+
+        let allMovies = [];
+        const seenIds = new Set(); // Track seen movie IDs
+
+        // Helper function to add movies with unique ID check
+        const addMovies = (movies, source) => {
+          if (!movies) return;
+          movies.forEach(movie => {
+            const movieId = movie.id;
+            if (!seenIds.has(movieId)) {
+              seenIds.add(movieId);
+              allMovies.push({
+                ...movie,
+                uniqueId: `${movieId}-${source}`, // Add unique identifier
+                source
+              });
+            }
+          });
+        };
+
+        // Fetch streaming content if services are enabled
+        const streamingServices = settings.streamingServices?.split(',').filter(Boolean) || [];
+        const fetchPromises = [];
+
+        // If no streaming services selected, fetch trending content
+        if (streamingServices.length === 0) {
+          try {
+            const trendingMovies = await streamingService.getTrendingContent(settings.apikey);
+            addMovies(trendingMovies, 'Trending');
+          } catch (error) {
+            console.error('Error fetching trending content:', error);
+          }
+        } else {
+          // Fetch from selected streaming services
+          if (streamingServices.includes('netflix')) {
+            fetchPromises.push(
+              streamingService.getNetflixContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Netflix - New This Week');
+                  addMovies(content.topShows, 'Netflix - Top Shows');
+                  addMovies(content.topMovies, 'Netflix - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Netflix content:', error))
+            );
+          }
+
+          if (streamingServices.includes('hbo')) {
+            fetchPromises.push(
+              streamingService.getHBOContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'HBO Max - New This Week');
+                  addMovies(content.topShows, 'HBO Max - Top Shows');
+                  addMovies(content.topMovies, 'HBO Max - Top Movies');
+                })
+                .catch(error => console.error('Error fetching HBO content:', error))
+            );
+          }
+
+          if (streamingServices.includes('disney')) {
+            fetchPromises.push(
+              streamingService.getDisneyContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Disney+ - New This Week');
+                  addMovies(content.topShows, 'Disney+ - Top Shows');
+                  addMovies(content.topMovies, 'Disney+ - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Disney+ content:', error))
+            );
+          }
+
+          if (streamingServices.includes('prime')) {
+            fetchPromises.push(
+              streamingService.getPrimeContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Prime Video - New This Week');
+                  addMovies(content.topShows, 'Prime Video - Top Shows');
+                  addMovies(content.topMovies, 'Prime Video - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Prime Video content:', error))
+            );
+          }
+
+          if (streamingServices.includes('hulu')) {
+            fetchPromises.push(
+              streamingService.getHuluContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Hulu - New This Week');
+                  addMovies(content.topShows, 'Hulu - Top Shows');
+                  addMovies(content.topMovies, 'Hulu - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Hulu content:', error))
+            );
+          }
+
+          if (streamingServices.includes('peacock')) {
+            fetchPromises.push(
+              streamingService.getPeacockContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Peacock - New This Week');
+                  addMovies(content.topShows, 'Peacock - Top Shows');
+                  addMovies(content.topMovies, 'Peacock - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Peacock content:', error))
+            );
+          }
+
+          if (streamingServices.includes('paramount')) {
+            fetchPromises.push(
+              streamingService.getParamountContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Paramount+ - New This Week');
+                  addMovies(content.topShows, 'Paramount+ - Top Shows');
+                  addMovies(content.topMovies, 'Paramount+ - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Paramount+ content:', error))
+            );
+          }
+
+          if (streamingServices.includes('apple')) {
+            fetchPromises.push(
+              streamingService.getAppleContent(settings.apikey)
+                .then(content => {
+                  addMovies(content.thisWeek, 'Apple TV+ - New This Week');
+                  addMovies(content.topShows, 'Apple TV+ - Top Shows');
+                  addMovies(content.topMovies, 'Apple TV+ - Top Movies');
+                })
+                .catch(error => console.error('Error fetching Apple TV+ content:', error))
+            );
+          }
+
+          // Wait for all streaming content to be fetched
+          await Promise.all(fetchPromises);
+        }
+
+        // Shuffle if enabled
+        if (settings.shuffle === 'true') {
+          allMovies = allMovies.sort(() => Math.random() - 0.5);
+        }
+
+        this.movies = allMovies;
+        this.loading = false;
+      } catch (error) {
+        console.error('Error fetching movies:', error);
+        this.error = 'Error loading movies. Please check your API key and try again.';
+        this.loading = false;
+      }
+    },
+    formatDate(dateStr) {
+      if (!dateStr) return ''
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    },
+    isInTheaters(movie) {
+      if (!movie.release_date) return false;
+      const releaseDate = new Date(movie.release_date);
+      const now = new Date();
+      const daysSinceRelease = (now - releaseDate) / (1000 * 60 * 60 * 24);
+      return daysSinceRelease <= 90; // Consider in theaters for 90 days after release
+    },
+    getOtherProviders(providers) {
+      if (!providers) return [];
+      // Filter out Netflix since it has its own badge
+      return providers.filter(p => p.provider_id !== 8);
+    },
     startSlideshow() {
-      this.stopSlideshow() // Clear any existing interval
-      this.slideInterval = setInterval(() => {
-        this.currentIndex = (this.currentIndex + 1) % this.movies.length
-      }, this.slideDuration)
+      if (this.interval) return;
+      const duration = parseInt(this.$route.query.slideDuration) || 30;
+      this.interval = setInterval(() => {
+        this.currentIndex = (this.currentIndex + 1) % this.movies.length;
+      }, duration * 1000);
     },
     stopSlideshow() {
-      if (this.slideInterval) {
-        clearInterval(this.slideInterval)
-        this.slideInterval = null
+      if (this.interval) {
+        clearInterval(this.interval);
+        this.interval = null;
       }
     },
     handleVisibilityChange() {
       if (document.hidden) {
-        this.stopSlideshow()
+        this.stopSlideshow();
       } else {
-        this.startSlideshow()
+        this.startSlideshow();
       }
     },
     handleImageLoad() {
       this.imagesLoaded++
+      this.imageLoaded = true
       // Start slideshow when first image is loaded
       if (this.imagesLoaded === 1) {
         this.startSlideshow()
@@ -160,67 +414,6 @@ export default {
     getMoviePoster(movie) {
       const imagePath = movie.poster_path || movie.backdrop_path
       return imagePath ? this.imageBaseUrl + imagePath : null
-    },
-    async getMovieDBPosters() {
-      try {
-        this.loading = true
-        this.error = null
-        this.movies = []
-        this.imagesLoaded = 0
-        
-        // Check for API key and redirect if not found
-        if (!this.$route.query.apikey) {
-          this.$router.push('/settings')
-          return
-        }
-
-        // Handle trending movies/shows
-        if (this.$route.query.trending || (!this.$route.query.tv && !this.$route.query.movies)) {
-          const type = this.$route.query.type || 'all'
-          const time = this.$route.query.time || 'day'
-          const response = await axios.get(
-            `https://api.themoviedb.org/3/trending/${type}/${time}?api_key=${this.$route.query.apikey}`
-          )
-          if (response.data.results?.length) {
-            this.movies = response.data.results
-          }
-        }
-
-        // Handle specific movie IDs
-        const movieIDs = this.$route.query?.movies?.split(',').filter(id => id.trim())
-        if (movieIDs?.length) {
-          const moviePromises = movieIDs.map(movieID =>
-            axios.get(`https://api.themoviedb.org/3/movie/${movieID.trim()}?api_key=${this.$route.query.apikey}`)
-          )
-          const responses = await Promise.all(moviePromises)
-          this.movies.push(...responses.map(response => response.data))
-        }
-
-        // Handle specific TV show IDs
-        const tvIDs = this.$route.query?.tv?.split(',').filter(id => id.trim())
-        if (tvIDs?.length) {
-          const tvPromises = tvIDs.map(tvID =>
-            axios.get(`https://api.themoviedb.org/3/tv/${tvID.trim()}?api_key=${this.$route.query.apikey}`)
-          )
-          const responses = await Promise.all(tvPromises)
-          this.movies.push(...responses.map(response => response.data))
-        }
-
-        if (!this.movies.length) {
-          throw new Error('No movies or TV shows found. Please check your query parameters.')
-        }
-
-        // Shuffle if requested
-        if (this.$route.query.shuffle === 'true') {
-          this.movies = this.movies.sort(() => Math.random() - 0.5)
-        }
-
-        this.loading = false
-      } catch (err) {
-        this.error = err.message || 'Failed to load movies'
-        console.error('Error loading movies:', err)
-        this.loading = false
-      }
     },
     handleMainClick(e) {
       // Only toggle controls if not clicking on the controls themselves
@@ -254,7 +447,7 @@ export default {
 <style>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 1s ease;
+  transition: opacity 0.5s ease;
 }
 
 .fade-enter-from,
@@ -262,9 +455,21 @@ export default {
   opacity: 0;
 }
 
-.fade-enter-to,
-.fade-leave-from {
-  opacity: 1;
+/* Netflix branding */
+.netflix-badge {
+  background-color: #E50914;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.netflix-badge img {
+  height: 1rem;
+  width: auto;
 }
 
 /* Add transform-origin for better rotation behavior */

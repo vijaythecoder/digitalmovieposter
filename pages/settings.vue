@@ -13,7 +13,7 @@
 
               <nav class="space-y-2">
                 <a 
-                  v-for="(section, index) in ['api', 'content', 'display']" 
+                  v-for="(section, index) in ['api', 'content', 'display', 'providers']" 
                   :key="section"
                   @click="activeSection = section"
                   class="flex items-center px-4 py-3 rounded-lg cursor-pointer transition-colors"
@@ -23,7 +23,7 @@
                         :class="activeSection === section ? 'border-indigo-600 text-indigo-600' : 'border-gray-400 text-gray-400'">
                     {{ index + 1 }}
                   </span>
-                  <span class="font-medium capitalize">{{ section === 'api' ? 'API Setup' : section === 'content' ? 'Content Selection' : 'Display Options' }}</span>
+                  <span class="font-medium capitalize">{{ section === 'api' ? 'API Setup' : section === 'content' ? 'Content Selection' : section === 'providers' ? 'Streaming Services' : 'Display Options' }}</span>
                 </a>
               </nav>
             </div>
@@ -153,7 +153,7 @@
                       <div class="space-y-2">
                         <label class="text-sm font-bold text-gray-700 block">Content Type</label>
                         <select 
-                          v-model="settings.type"
+                          v-model="settings.mediaType"
                           class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 outline-none focus:border-indigo-500 transition-colors appearance-none bg-white"
                         >
                           <option value="all">All Content</option>
@@ -167,10 +167,10 @@
                         <div class="flex space-x-4">
                           <button 
                             type="button"
-                            @click="settings.time = 'day'"
+                            @click="settings.timeWindow = 'day'"
                             :class="[
                               'flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                              settings.time === 'day' 
+                              settings.timeWindow === 'day' 
                                 ? 'bg-indigo-600 text-white' 
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             ]"
@@ -179,10 +179,10 @@
                           </button>
                           <button 
                             type="button"
-                            @click="settings.time = 'week'"
+                            @click="settings.timeWindow = 'week'"
                             :class="[
                               'flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                              settings.time === 'week' 
+                              settings.timeWindow === 'week' 
                                 ? 'bg-indigo-600 text-white' 
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             ]"
@@ -286,14 +286,14 @@
                       <label class="text-sm font-bold text-gray-700 block">Slide Duration</label>
                       <div class="flex items-center space-x-4">
                         <input 
-                          v-model.number="settings.timer"
+                          v-model.number="settings.slideDuration"
                           type="range"
                           min="1"
                           max="60"
                           class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                         >
                         <span class="text-sm font-medium text-gray-700 w-20 text-right">
-                          {{ settings.timer }} seconds
+                          {{ settings.slideDuration }} seconds
                         </span>
                       </div>
                     </div>
@@ -317,6 +317,28 @@
                         </button>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Streaming Providers Settings -->
+              <div v-show="activeSection === 'providers'" class="space-y-6">
+                <div class="border-b border-gray-200 pb-4">
+                  <h3 class="text-lg font-bold text-gray-900">Streaming Services</h3>
+                  <p class="text-sm text-gray-500 mt-1">Select your available streaming services</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div v-for="provider in streamingProviders" :key="provider.id" class="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      :id="provider.id"
+                      v-model="settings.providers[provider.id]"
+                      class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    >
+                    <label :for="provider.id" class="flex-1 text-sm font-medium text-gray-700 cursor-pointer">
+                      {{ provider.name }}
+                    </label>
                   </div>
                 </div>
               </div>
@@ -359,44 +381,121 @@
 </template>
 
 <script>
+import { streamingService } from '../services/streaming';
+
 export default {
   name: 'SettingsPage',
   data() {
     return {
       activeSection: 'api',
-      sections: ['api', 'content', 'display'],
+      copySuccess: false,
+      generatedURL: '',
       settings: {
         apikey: '',
         contentType: 'trending',
-        type: 'all',
-        time: 'day',
-        movies: '',
-        tv: '',
-        timer: 10,
-        rotate: '0',
+        mediaType: 'all',
+        timeWindow: 'day',
+        genreId: '',
+        showInfo: true,
         shuffle: false,
-        showInfo: true
+        slideDuration: 30,
+        rotate: '0',
+        providers: {
+          netflix: false,
+          hbo: false,
+          disney: false,
+          prime: false,
+          hulu: false,
+          peacock: false,
+          paramount: false,
+          apple: false,
+        },
+        streamingContent: {
+          netflix: {
+            thisWeek: [],
+            topShows: [],
+            topMovies: []
+          }
+        }
       },
-      generatedURL: '',
       rotationOptions: [
         { value: '0', label: 'No Rotation' },
         { value: '-90', label: 'Rotate Left' },
         { value: '90', label: 'Rotate Right' },
         { value: '180', label: 'Upside Down' }
       ],
-      copySuccess: false
+      streamingProviders: [
+        { id: 'netflix', name: 'Netflix' },
+        { id: 'hbo', name: 'HBO Max' },
+        { id: 'disney', name: 'Disney+' },
+        { id: 'prime', name: 'Amazon Prime' },
+        { id: 'hulu', name: 'Hulu' },
+        { id: 'peacock', name: 'Peacock' },
+        { id: 'paramount', name: 'Paramount+' },
+        { id: 'apple', name: 'Apple TV+' },
+      ],
     }
   },
   watch: {
     settings: {
-      handler(newSettings) {
-        localStorage.setItem('settings', JSON.stringify(newSettings))
-        this.generateURL()
+      handler() {
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+        this.generateURL();
+      },
+      deep: true
+    },
+    'settings.providers': {
+      async handler(newProviders) {
+        if (this.settings.apikey) {
+          try {
+            // Handle Netflix content
+            if (newProviders.netflix) {
+              const netflixContent = await streamingService.getNetflixContent(this.settings.apikey);
+              this.settings.streamingContent.netflix = netflixContent;
+            } else {
+              this.settings.streamingContent.netflix = {
+                thisWeek: [],
+                topShows: [],
+                topMovies: []
+              };
+            }
+          } catch (error) {
+            console.error('Error updating streaming content:', error);
+          }
+        }
       },
       deep: true
     }
   },
   methods: {
+    generateURL() {
+      if (!this.settings.apikey) return;
+
+      const baseURL = window.location.origin;
+      const params = new URLSearchParams();
+      
+      // Add basic settings
+      params.set('apikey', this.settings.apikey);
+      params.set('contentType', this.settings.contentType);
+      params.set('mediaType', this.settings.mediaType);
+      params.set('timeWindow', this.settings.timeWindow);
+      if (this.settings.genreId) params.set('genreId', this.settings.genreId);
+      params.set('showInfo', this.settings.showInfo);
+      params.set('shuffle', this.settings.shuffle);
+      params.set('slideDuration', this.settings.slideDuration);
+      params.set('rotation', this.settings.rotate || '0');
+      
+      // Add enabled streaming services
+      const enabledServices = Object.entries(this.settings.providers)
+        .filter(([_, enabled]) => enabled)
+        .map(([service]) => service);
+      
+      if (enabledServices.length > 0) {
+        params.set('streamingServices', enabledServices.join(','));
+      }
+
+      this.generatedURL = `${baseURL}?${params.toString()}`;
+    },
     copyURL() {
       navigator.clipboard.writeText(this.generatedURL).then(() => {
         this.copySuccess = true
@@ -404,19 +503,6 @@ export default {
           this.copySuccess = false
         }, 2000)
       })
-    },
-    generateURL() {
-      if (!this.settings.apikey) return
-      
-      const baseUrl = window.location.hostname === 'localhost' 
-        ? window.location.origin 
-        : `${window.location.origin}/digitalmovieposter`
-        
-      const params = new URLSearchParams()
-      Object.entries(this.settings).forEach(([key, value]) => {
-        params.set(key, value)
-      })
-      this.generatedURL = `${baseUrl}?${params.toString()}`
     },
     toggleShowInfo() {
       this.settings.showInfo = !this.settings.showInfo
@@ -430,9 +516,11 @@ export default {
     }
   },
   mounted() {
-    const savedSettings = localStorage.getItem('settings')
+    // Load saved settings
+    const savedSettings = localStorage.getItem('settings');
     if (savedSettings) {
-      this.settings = { ...this.settings, ...JSON.parse(savedSettings) }
+      this.settings = JSON.parse(savedSettings);
+      this.generateURL();
     }
   }
 }
