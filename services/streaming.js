@@ -28,21 +28,38 @@ export const streamingService = {
 
       // For TV shows, get additional season info
       let seasons = null;
-      if (type === 'tv') {
+      if (type === 'tv' && details.data.seasons && details.data.seasons.length > 0) {
         seasons = details.data.number_of_seasons;
         const lastSeason = details.data.seasons[details.data.seasons.length - 1];
         details.data.latest_season = lastSeason;
       }
 
+      const watchProviders = providers.data.results?.US || {};
       return {
         ...details.data,
-        watch_providers: providers.data.results?.US || {},
+        watch_providers: {
+          flatrate: watchProviders.flatrate || [],
+          free: watchProviders.free || [],
+          ads: watchProviders.ads || [],
+          rent: watchProviders.rent || [],
+          buy: watchProviders.buy || []
+        },
         content_type: type,
         number_of_seasons: seasons
       };
     } catch (error) {
       console.error('Error fetching content details:', error);
-      return null;
+      return {
+        watch_providers: {
+          flatrate: [],
+          free: [],
+          ads: [],
+          rent: [],
+          buy: []
+        },
+        content_type: type,
+        number_of_seasons: null
+      };
     }
   },
 
