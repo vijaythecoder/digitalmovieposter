@@ -519,7 +519,7 @@ export default {
         params.set('streamingServices', enabledServices.join(','));
       }
 
-      this.generatedURL = `${baseURL}?${params.toString()}`;
+      this.generatedURL = `${baseURL}/digitalmovieposter?${params.toString()}`;
     },
     copyURL() {
       navigator.clipboard.writeText(this.generatedURL).then(() => {
