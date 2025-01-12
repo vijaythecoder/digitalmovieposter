@@ -450,8 +450,21 @@ export default {
           try {
             // Handle Netflix content
             if (newProviders.netflix) {
-              const netflixContent = await streamingService.getNetflixContent(this.settings.apikey);
-              this.settings.streamingContent.netflix = netflixContent;
+              try {
+                const netflixContent = await streamingService.getNetflixContent(this.settings.apikey);
+                this.settings.streamingContent.netflix = netflixContent || {
+                  thisWeek: [],
+                  topShows: [],
+                  topMovies: []
+                };
+              } catch (error) {
+                console.error('Error fetching Netflix content:', error);
+                this.settings.streamingContent.netflix = {
+                  thisWeek: [],
+                  topShows: [],
+                  topMovies: []
+                };
+              }
             } else {
               this.settings.streamingContent.netflix = {
                 thisWeek: [],
@@ -461,6 +474,18 @@ export default {
             }
           } catch (error) {
             console.error('Error updating streaming content:', error);
+            // Initialize empty streaming content structure if not exists
+            if (!this.settings.streamingContent) {
+              this.settings.streamingContent = {};
+            }
+            // Ensure Netflix content structure exists even on error
+            if (!this.settings.streamingContent.netflix) {
+              this.settings.streamingContent.netflix = {
+                thisWeek: [],
+                topShows: [],
+                topMovies: []
+              };
+            }
           }
         }
       },
